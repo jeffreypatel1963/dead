@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with the Lion</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+            animation: subtleShake 1s infinite;
+        }
+        .chat-container {
+            width: 80%;
+            max-width: 600px;
+            padding: 0;
+            position: relative;
+            z-index: 2;
+            animation: subtleShake 1s infinite;
+        }
+        .chat-box {
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+            background: transparent;
+            margin-bottom: 10px;
+            color: #ddd;
+            font-size: 14px;
+        }
+        .chat-input {
+            width: calc(100% - 100px);
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            background: #444;
+            color: #ddd;
+        }
+        .chat-button {
+            padding: 10px;
+            background: #d00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .chat-button:hover {
+            background: #b00;
+        }
+        .flashing-text {
+            position: absolute;
+            color: #ff0000;
+            animation: flash 0.1s infinite, shake 0.2s infinite;
+            z-index: 1;
+            opacity: 0.1;
+            filter: blur(2px);
+            mix-blend-mode: difference;
+        }
+        @keyframes flash {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+        @keyframes shake {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            10%, 30%, 50%, 70%, 90% {
+                transform: translate(-5px, -5px) rotate(-5deg);
+            }
+            20%, 40%, 60%, 80% {
+                transform: translate(5px, 5px) rotate(5deg);
+            }
+        }
+        @keyframes subtleShake {
+            0%, 100% {
+                transform: translate(0, 0);
+            }
+            25% {
+                transform: translate(-1px, -1px);
+            }
+            50% {
+                transform: translate(1px, 1px);
+            }
+            75% {
+                transform: translate(-1px, 1px);
+            }
+        }
+        .lion-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 100%;
+            height: auto;
+            filter: blur(5px) contrast(150%);
+            z-index: 0;
+            animation: shake 0.5s infinite;
+        }
+        .static {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('static.gif') repeat;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .lion-alive-text {
+            font-size: 36px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            text-align: center;
+            width: 100%;
+            z-index: 2;
+        }
+        .chat-message {
+            margin: 5px 0;
+        }
+        .chat-message.player {
+            color: #ddd;
+            font-size: 14px;
+        }
+        .chat-message.other {
+            color: black;
+            font-size: 20px;
+            filter: blur(2px);
+        }
+    </style>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-database.js"></script>
+</head>
+<body>
+    <div class="static"></div>
+    <img src="lion-distorted.jpg" alt="Distorted Lion" class="lion-image">
+    <div class="lion-alive-text">The Lion is Alive</div>
+    <div class="chat-container">
+        <div class="chat-box" id="chat-box">
+            <!-- Messages will be appended here -->
+        </div>
+        <input type="text" class="chat-input" id="chat-input" placeholder="">
+        <button class="chat-button" id="chat-button">Send</button>
+    </div>
+
+    <audio id="static-sound" autoplay loop>
+        <source src="static.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="lion-sound" autoplay loop>
+        <source src="lion-sound.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-W98afGpLN0Ba7Sw91q1rcLXnZP_FLsA",
+            authDomain: "talklucas-b52e5.firebaseapp.com",
+            databaseURL: "https://talklucas-b52e5-default-rtdb.firebaseio.com",
+            projectId: "talklucas-b52e5",
+            storageBucket: "talklucas-b52e5.appspot.com",
+            messagingSenderId: "968533410409",
+            appId: "1:968533410409:web:6415ca2ff5eb2a385f18f8"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const chatBox = document.getElementById('chat-box');
+        const chatInput = document.getElementById('chat-input');
+        const chatButton = document.getElementById('chat-button');
+
+        chatButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message) {
+                const newMessageRef = db.ref('messages').push();
+                newMessageRef.set({
+                    sender: "Player",
+                    message: message,
+                    timestamp: Date.now()
+                });
+                chatInput.value = '';
+            }
+        }
+
+        db.ref('messages').orderByChild('timestamp').on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            appendMessage(data.sender, data.message);
+        });
+
+        function appendMessage(sender, message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message');
+            messageElement.classList.add(sender === 'Player' ? 'player' : 'other');
+            messageElement.style.fontFamily = sender === 'Player' ? 'inherit' : fonts[Math.floor(Math.random() * fonts.length)];
+            messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Randomized flashing texts
+        const texts = [
+            "why", "he did not bury me", "i am still here", "the pain is unending", 
+            "please let me go", "im so sorry", "forgive me", "i didnt deserve this", 
+            "she was evil", "i never murdered anyone", "i can feel the dirt", 
+            "it crushed my skull", "i felt all of it", "please let me die", 
+            "let me die", "save me", "please", "help me", "dear god", "jeff is a monster"
+        ];
+        
+        const fonts = ["'Courier New', Courier, monospace", "'Arial', sans-serif", "'Times New Roman', Times, serif", "'Comic Sans MS', cursive, sans-serif"];
+        const container = document.body;
+
+        function createFlashingText() {
+            const text = document.createElement('div');
+            text.classList.add('flashing-text');
+            text.textContent = texts[Math.floor(Math.random() * texts.length)];
+            text.style.fontFamily = fonts[Math.floor(Math.random() * fonts.length)];
+            text.style.fontSize = `${Math.random() * 2 + 1}em`;
+            text.style.top = `${Math.random() * 100}%`;
+            text.style.left = `${Math.random() * 100}%`;
+            text.style.transform = `rotate(${Math.random() * 360}deg)`;
+            text.style.animationDuration = `${Math.random() * 0.3 + 0.1}s, shake ${Math.random() * 0.3 + 0.1}s infinite`;
+            container.appendChild(text);
+            setTimeout(() => container.removeChild(text), 1000);
+        }
+
+        setInterval(createFlashingText, 100);
+
+        // Play sounds
+        const staticSound = document.getElementById('static-sound');
+        staticSound.volume = 0.3;
+        staticSound.play().catch(error => console.error('Error playing static sound:', error));
+
+        const lionSound = document.getElementById('lion-sound');
+        lionSound.volume = 0.5;
+        lionSound.play().catch(error => console.error('Error playing lion sound:', error));
+    </script>
+</body>
+</html>
